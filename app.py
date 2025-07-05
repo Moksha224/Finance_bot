@@ -37,7 +37,7 @@ def webhook():
     if text == "/start":
         send_message(chat_id, "Welcome! Select a category to begin:", reply_markup=create_buttons())
     elif text == "/history":
-        history = get_user_history(user_id)
+        history = get_history(user_id)
         send_message(chat_id, history)
     elif user_id in user_states:
         category = user_states.pop(user_id)
@@ -51,7 +51,7 @@ def webhook():
         user_states[user_id] = text
         send_message(chat_id, f"Enter amount for {text}:")
     elif text == "/clear":
-        clear_user_expenses(user_id)
+        clear_expenses(user_id)
         send_message(chat_id, "🗑️ Your expenses have been cleared.")
     else:
         send_message(chat_id, "Please choose a category first:", reply_markup=create_buttons())
