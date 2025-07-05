@@ -1,15 +1,22 @@
 # utils.py
 
-import re
+import requests
+from config import BOT_URL
 
-def extract_expense(text):
-    # Matches inputs like: 200 food, ₹300 travel, add 400 shopping
-    amount_match = re.search(r'(?:₹|rs)?\s*(\d+)', text.lower())
-    category_match = re.search(r'(?:on\s+)?([a-zA-Z]+)$', text.lower())
+def send_message(chat_id, text, reply_markup=None):
+    payload = {
+        "chat_id": chat_id,
+        "text": text
+    }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+    requests.post(f"{BOT_URL}/sendMessage", json=payload)
 
-    if amount_match and category_match:
-        amount = float(amount_match.group(1))
-        category = category_match.group(1)
-        return amount, category
-    return None, None
-
+def create_category_buttons():
+    categories = ["Food", "Travel", "Groceries", "Snacks", "Health"]
+    keyboard = [[{"text": category}] for category in categories]
+    return {
+        "keyboard": keyboard,
+        "one_time_keyboard": True,
+        "resize_keyboard": True
+    }
