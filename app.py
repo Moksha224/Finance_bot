@@ -1,53 +1,85 @@
+# app.py
+
 from flask import Flask, request
 import requests
-import os
+from db import user_expenses
 from utils import extract_expense
-from db import insert_expense, get_monthly_total, get_category_summary
-from config import TELEGRAM_TOKEN, BOT_URL
+import os
 
 app = Flask(__name__)
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+URL = f"https://api.telegram.org/bot{TOKEN}"
 
-def send_message(chat_id, text):
-    url = f"{BOT_URL}/sendMessage"
-    payload = {"chat_id": chat_id, "text": text}
-    requests.post(url, json=payload)
+# Send message
+def send_message(chat_id, text, reply_markup=None):
+    data = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML"
+    }
+    if reply_markup:
+        data["reply_markup"] = reply_markup
+    requests.post(f"{URL}/sendMessage", json=data)
+
+# Reply keyboard (suggestions)
+def get_keyboard():
+    return {
+        "keyboard": [
+            ["₹100 Food", "₹200 Travel"],
+            ["₹300 Shopping", "₹150 Bills"],
+            ["How much I spent?", "Show breakdown"]
+        ],
+        "resize_keyboard": True,
+        "one_time_keyboard": False
+    }
 
 @app.route("/", methods=["POST"])
 def webhook():
     data = request.get_json()
-    message = data.get("message", {})
-    text = message.get("text", "")
-    chat_id = message["chat"]["id"]
-    user_id = str(message["from"]["id"])
+    if "message" not in data:
+        return "ok"
 
+    chat_id = data["message"]["chat"]["id"]
+    user_id = str(chat_id)
+    text = data["message"].get("text", "")
+
+    # Commands
     if text.lower().startswith("/start"):
-        send_message(chat_id, "👋 Welcome to Expense Bot! Type: 'I spent ₹500 on food'")
+        send_message(
+            chat_id,
+            "👋 Welcome to Expense Bot!\n\n"
+            "💡 Just send:\n"
+            "• ₹100 food\n"
+            "• 200 travel\n"
+            "• how much I spent?\n\n"
+            "Choose below ⬇️",
+            reply_markup=get_keyboard()
+        )
         return "ok"
 
-    if "spent" in text.lower():
-        amount, category = extract_expense(text)
-        if amount and category:
-            insert_expense(user_id, category, amount)
-            send_message(chat_id, f"✅ Added ₹{amount} for {category}")
-        else:
-            send_message(chat_id, "❌ Couldn't understand. Try: 'I spent ₹500 on food'")
-        return "ok"
-
-    if "how much" in text.lower() and "month" in text.lower():
-        total = get_monthly_total(user_id)
-        send_message(chat_id, f"💸 You've spent ₹{total:.2f} this month.")
+    if "how much" in text.lower():
+        total = sum(exp["amount"] for exp in user_expenses.get(user_id, []))
+        send_message(chat_id, f"💰 You’ve spent ₹{total:.2f} so far.")
         return "ok"
 
     if "breakdown" in text.lower():
-        breakdown = get_category_summary(user_id)
+        breakdown = {}
+        for exp in user_expenses.get(user_id, []):
+            breakdown[exp["category"]] = breakdown.get(exp["category"], 0) + exp["amount"]
+
         if breakdown:
-            msg = "📊 Breakdown:\n"
-            for cat, amt in breakdown:
-                msg += f"• {cat.capitalize()}: ₹{amt:.2f}\n"
+            reply = "\n".join([f"• {k.capitalize()}: ₹{v:.2f}" for k, v in breakdown.items()])
+            send_message(chat_id, f"📊 Expense Breakdown:\n{reply}")
         else:
-            msg = "No expenses found."
-        send_message(chat_id, msg)
+            send_message(chat_id, "No expenses added yet.")
         return "ok"
 
-    send_message(chat_id, "Try saying: 'I spent ₹300 on travel'")
+    # Add new expense
+    amount, category = extract_expense(text)
+    if amount and category:
+        user_expenses.setdefault(user_id, []).append({"amount": amount, "category": category.lower()})
+        send_message(chat_id, f"✅ Added ₹{amount} under <b>{category}</b>", reply_markup=get_keyboard())
+    else:
+        send_message(chat_id, "❓ I didn't understand. Try something like: ₹250 travel", reply_markup=get_keyboard())
+
     return "ok"
