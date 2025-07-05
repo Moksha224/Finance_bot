@@ -10,6 +10,7 @@ create_table()
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 BOT_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
+
 user_states = {}
 
 
@@ -17,7 +18,11 @@ def send_message(chat_id, text, reply_markup=None):
     data = {"chat_id": chat_id, "text": text}
     if reply_markup:
         data["reply_markup"] = reply_markup
-    requests.post(f"{BOT_URL}/sendMessage", json=data)
+
+    print("Sending message:", data)  # Debug log
+    resp = requests.post(f"{BOT_URL}/sendMessage", json=data)
+    print("Telegram response:", resp.text)  # See the API response
+
 
 
 def create_buttons():
