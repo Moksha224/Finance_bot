@@ -2,15 +2,9 @@ import re
 
 def extract_expense(text):
     match = re.search(r'₹?(\d+)', text)
-    amount = float(match.group(1)) if match else None
-
-    # Try to find category
-    categories = ['food', 'travel', 'rent', 'groceries', 'shopping', 'bills']
-    text = text.lower()
-    category = None
-    for cat in categories:
-        if cat in text:
-            category = cat
-            break
-
-    return amount, category
+    category_match = re.search(r'on (\w+)', text.lower())
+    if match and category_match:
+        amount = float(match.group(1))
+        category = category_match.group(1)
+        return amount, category
+    return None, None
