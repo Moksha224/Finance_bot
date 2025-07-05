@@ -6,7 +6,8 @@ from db import create_table, insert_expense, get_history, clear_expenses
 app = Flask(__name__)
 create_table()
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
 BOT_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 user_states = {}
 
