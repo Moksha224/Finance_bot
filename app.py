@@ -1,4 +1,6 @@
 # app.py
+from db import create_table, insert_expense, get_history, clear_expenses
+
 import os
 import sqlite3
 from flask import Flask, request
