@@ -7,14 +7,10 @@ from db import create_table, insert_expense, get_history, clear_expenses
 
 app = Flask(__name__)
 create_table()
-
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 print("Loaded BOT_TOKEN:", BOT_TOKEN)  # Debug log
-
 BOT_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
-
 user_states = {}
-
 
 def send_message(chat_id, text, reply_markup=None):
     print("Current BOT_URL:", BOT_URL)  # Add this line
