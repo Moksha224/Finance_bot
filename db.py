@@ -1,6 +1,6 @@
 import sqlite3
 
-# Create table (run once)
+# ✅ Run once to create the table
 def create_table():
     conn = sqlite3.connect('expenses.db')
     c = conn.cursor()
@@ -13,7 +13,7 @@ def create_table():
     conn.commit()
     conn.close()
 
-# Insert expense
+# ✅ Insert new expense
 def insert_expense(user_id, category, amount):
     conn = sqlite3.connect('expenses.db')
     c = conn.cursor()
@@ -22,7 +22,7 @@ def insert_expense(user_id, category, amount):
     conn.commit()
     conn.close()
 
-# Get expense history
+# ✅ Get all expenses
 def get_history(user_id):
     conn = sqlite3.connect('expenses.db')
     c = conn.cursor()
@@ -31,7 +31,7 @@ def get_history(user_id):
     conn.close()
     return rows
 
-# Clear user history
+# ✅ Delete all expenses
 def clear_expenses(user_id):
     conn = sqlite3.connect('expenses.db')
     c = conn.cursor()
