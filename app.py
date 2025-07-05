@@ -5,6 +5,7 @@ import os
 import sqlite3
 from flask import Flask, request
 import requests
+create_table()
 
 app = Flask(__name__)
 
