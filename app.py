@@ -15,13 +15,15 @@ user_states = {}
 
 
 def send_message(chat_id, text, reply_markup=None):
+    print("Current BOT_URL:", BOT_URL)  # Add this line
+
     data = {"chat_id": chat_id, "text": text}
     if reply_markup:
         data["reply_markup"] = reply_markup
 
-    print("Sending message:", data)  # Debug log
-    resp = requests.post(f"{BOT_URL}/sendMessage", json=data)
-    print("Telegram response:", resp.text)  # See the API response
+    response = requests.post(f"{BOT_URL}/sendMessage", json=data)
+    print("Sending message:", data)
+    print("Telegram response:", response.text)
 
 
 
