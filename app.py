@@ -1,85 +1,56 @@
 # app.py
-
+import os
+import sqlite3
 from flask import Flask, request
 import requests
-from db import user_expenses
-from utils import extract_expense
-import os
 
 app = Flask(__name__)
-TOKEN = os.getenv("TELEGRAM_TOKEN")
-URL = f"https://api.telegram.org/bot{TOKEN}"
 
-# Send message
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+BOT_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
+user_states = {}  # Temporary category selection per user
+
 def send_message(chat_id, text, reply_markup=None):
-    data = {
-        "chat_id": chat_id,
-        "text": text,
-        "parse_mode": "HTML"
-    }
+    data = {"chat_id": chat_id, "text": text}
     if reply_markup:
         data["reply_markup"] = reply_markup
-    requests.post(f"{URL}/sendMessage", json=data)
+    requests.post(f"{BOT_URL}/sendMessage", json=data)
 
-# Reply keyboard (suggestions)
-def get_keyboard():
-    return {
-        "keyboard": [
-            ["₹100 Food", "₹200 Travel"],
-            ["₹300 Shopping", "₹150 Bills"],
-            ["How much I spent?", "Show breakdown"]
-        ],
-        "resize_keyboard": True,
-        "one_time_keyboard": False
-    }
+def create_buttons():
+    categories = ["Food", "Travel", "Groceries", "Snacks", "Health"]
+    buttons = [[{"text": cat}] for cat in categories]
+    return {"keyboard": buttons, "one_time_keyboard": True, "resize_keyboard": True}
 
 @app.route("/", methods=["POST"])
 def webhook():
     data = request.get_json()
     if "message" not in data:
-        return "ok"
+        return "OK"
 
     chat_id = data["message"]["chat"]["id"]
-    user_id = str(chat_id)
     text = data["message"].get("text", "")
+    user_id = data["message"]["from"]["id"]
 
-    # Commands
-    if text.lower().startswith("/start"):
-        send_message(
-            chat_id,
-            "👋 Welcome to Expense Bot!\n\n"
-            "💡 Just send:\n"
-            "• ₹100 food\n"
-            "• 200 travel\n"
-            "• how much I spent?\n\n"
-            "Choose below ⬇️",
-            reply_markup=get_keyboard()
-        )
-        return "ok"
-
-    if "how much" in text.lower():
-        total = sum(exp["amount"] for exp in user_expenses.get(user_id, []))
-        send_message(chat_id, f"💰 You’ve spent ₹{total:.2f} so far.")
-        return "ok"
-
-    if "breakdown" in text.lower():
-        breakdown = {}
-        for exp in user_expenses.get(user_id, []):
-            breakdown[exp["category"]] = breakdown.get(exp["category"], 0) + exp["amount"]
-
-        if breakdown:
-            reply = "\n".join([f"• {k.capitalize()}: ₹{v:.2f}" for k, v in breakdown.items()])
-            send_message(chat_id, f"📊 Expense Breakdown:\n{reply}")
-        else:
-            send_message(chat_id, "No expenses added yet.")
-        return "ok"
-
-    # Add new expense
-    amount, category = extract_expense(text)
-    if amount and category:
-        user_expenses.setdefault(user_id, []).append({"amount": amount, "category": category.lower()})
-        send_message(chat_id, f"✅ Added ₹{amount} under <b>{category}</b>", reply_markup=get_keyboard())
+    if text == "/start":
+        send_message(chat_id, "Welcome! Select a category to begin:", reply_markup=create_buttons())
+    elif text == "/history":
+        history = get_user_history(user_id)
+        send_message(chat_id, history)
+    elif user_id in user_states:
+        category = user_states.pop(user_id)
+        try:
+            amount = float(text)
+            insert_expense(user_id, category, amount)
+            send_message(chat_id, f"✅ Recorded {amount} under {category}.")
+        except ValueError:
+            send_message(chat_id, "❌ Invalid amount. Please enter a number.")
+    elif text in ["Food", "Travel", "Groceries", "Snacks", "Health"]:
+        user_states[user_id] = text
+        send_message(chat_id, f"Enter amount for {text}:")
+    elif text == "/clear":
+        clear_user_expenses(user_id)
+        send_message(chat_id, "🗑️ Your expenses have been cleared.")
     else:
-        send_message(chat_id, "❓ I didn't understand. Try something like: ₹250 travel", reply_markup=get_keyboard())
+        send_message(chat_id, "Please choose a category first:", reply_markup=create_buttons())
 
-    return "ok"
+    return "OK"
