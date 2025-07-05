@@ -9,6 +9,8 @@ app = Flask(__name__)
 create_table()
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
+print("Loaded BOT_TOKEN:", BOT_TOKEN)  # Debug log
+
 BOT_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 user_states = {}
